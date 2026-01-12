@@ -19,7 +19,7 @@ function getNetworkIP() {
 
 const LOCALHOST_FLAG = process.env.LOCALHOST || '0';
 const HOST = LOCALHOST_FLAG === '1' ? 'localhost' : getNetworkIP();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.SERVER_PORT || 3000;
 
 app.use(express.static(path.join(__dirname, 'frontend')));
 
