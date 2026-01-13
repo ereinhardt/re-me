@@ -8,5 +8,8 @@
 ```env
 LOCALHOST="0" // Flag "1" to host on localhost, "0" to automatically use your (Server) current network IP
 SERVER_PORT="5002" // Port of file server, e.g., 5002
-USERS_FOLDER="users" // Path to folder
+BRAVIS_GATEWAY_IP=192.168.1.100
+BRAVIS_GATEWAY_USER=admin
+BRAVIS_GATEWAY_PASS=admin
+USERS_FOLDER=users
 ```
