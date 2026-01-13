@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,9 +8,35 @@
 </head>
 <body>
     <h1>re: me – Settings</h1>
-    <a href="chat.html?phone=+49123456789" target="_blank">+49 123 456 789</a><br>
-    <a href="chat.html?phone=+49987654321" target="_blank">+49 987 654 321</a><br>
-    <a href="chat.html?phone=+49555123456" target="_blank">+49 555 123 456</a><br>
-    <a href="chat.html?phone=+49777888999" target="_blank">+49 777 888 999</a>
+    <div id="contactList"></div>
+
+    <script>
+        async function loadContacts() {
+            try {
+                const res = await fetch('/api/contacts');
+                const contacts = await res.json();
+                
+                const listDiv = document.getElementById('contactList');
+                listDiv.innerHTML = '';
+                
+                contacts.forEach(contact => {
+                    const link = document.createElement('a');
+                    link.href = `chat.html?phone=${encodeURIComponent(contact.phone)}`;
+                    link.target = '_blank';
+                    link.textContent = contact.phone;
+                    listDiv.appendChild(link);
+                    listDiv.appendChild(document.createElement('br'));
+                });
+            } catch (error) {
+                console.error('Error loading contacts:', error);
+            }
+        }
+
+        // Initial load
+        loadContacts();
+        
+        // Update every 5 seconds
+        setInterval(loadContacts, 5000);
+    </script>
 </body>
 </html>
