@@ -1,95 +1,99 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>re: me – Chat</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
     <a href="./index.html">Back</a>
     <h2>+<span id="phoneNumber"></span></h2>
-    
+
     <div id="messages"></div>
-    
+
     <div class="input-container">
-        <input type="text" id="messageInput" placeholder="Enter message...">
-        <button onclick="sendMessage()">Send</button>
+      <input type="text" id="messageInput" placeholder="Enter message..." />
+      <button onclick="sendMessage()">Send</button>
     </div>
 
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const phone = urlParams.get('phone');
-        document.getElementById('phoneNumber').textContent = phone;
+      const urlParams = new URLSearchParams(window.location.search);
+      const phone = urlParams.get("phone");
+      document.getElementById("phoneNumber").textContent = phone;
 
-        function formatTimestamp(timestamp) {
-            const date = new Date(parseInt(timestamp) * 1000);
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const year = date.getFullYear();
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            const seconds = String(date.getSeconds()).padStart(2, '0');
-            return `${day}.${month}.${year}, ${hours}:${minutes}:${seconds}`;
+      function formatTimestamp(timestamp) {
+        const date = new Date(parseInt(timestamp) * 1000);
+        const day = String(date.getDate()).padStart(2, "0");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const year = date.getFullYear();
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        const seconds = String(date.getSeconds()).padStart(2, "0");
+        return `${day}.${month}.${year}, ${hours}:${minutes}:${seconds}`;
+      }
+
+      let lastMessageCount = 0;
+
+      async function loadMessages() {
+        try {
+          const res = await fetch(`/api/messages/${encodeURIComponent(phone)}`);
+          const messages = await res.json();
+
+          const messagesDiv = document.getElementById("messages");
+          const wasAtBottom =
+            messagesDiv.scrollTop + messagesDiv.clientHeight >=
+            messagesDiv.scrollHeight - 20;
+          const hasNewMessages = messages.length !== lastMessageCount;
+
+          messagesDiv.innerHTML = "";
+
+          messages.forEach((msg) => {
+            const messageElement = document.createElement("div");
+            const sender = msg.type === "incoming" ? phone : "You";
+            const time = formatTimestamp(msg.timestamp);
+            messageElement.textContent = `${sender} (${time}): ${msg.text}`;
+            messagesDiv.appendChild(messageElement);
+          });
+
+          lastMessageCount = messages.length;
+        } catch (error) {
+          console.error("Error loading messages:", error);
         }
+      }
 
-        let lastMessageCount = 0;
+      async function sendMessage() {
+        const input = document.getElementById("messageInput");
+        const message = input.value;
+        if (message.trim() === "") return;
 
-        async function loadMessages() {
-            try {
-                const res = await fetch(`/api/messages/${encodeURIComponent(phone)}`);
-                const messages = await res.json();
-                
-                const messagesDiv = document.getElementById('messages');
-                const wasAtBottom = messagesDiv.scrollTop + messagesDiv.clientHeight >= messagesDiv.scrollHeight - 20;
-                const hasNewMessages = messages.length !== lastMessageCount;
+        try {
+          await fetch(`/api/messages/${encodeURIComponent(phone)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: message }),
+          });
 
-                messagesDiv.innerHTML = '';
-                
-                messages.forEach(msg => {
-                    const messageElement = document.createElement('div');
-                    const sender = msg.type === 'incoming' ? phone : 'You';
-                    const time = formatTimestamp(msg.timestamp);
-                    messageElement.textContent = `${sender} (${time}): ${msg.text}`;
-                    messagesDiv.appendChild(messageElement);
-                });
-
-                lastMessageCount = messages.length;
-            } catch (error) {
-                console.error('Error loading messages:', error);
-            }
+          input.value = "";
+          loadMessages();
+        } catch (error) {
+          console.error("Error sending message:", error);
         }
+      }
 
-        async function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const message = input.value;
-            if (message.trim() === '') return;
-
-            try {
-                await fetch(`/api/messages/${encodeURIComponent(phone)}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: message })
-                });
-                
-                input.value = '';
-                loadMessages();
-            } catch (error) {
-                console.error('Error sending message:', error);
-            }
-        }
-
-        document.getElementById('messageInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
+      document
+        .getElementById("messageInput")
+        .addEventListener("keypress", function (e) {
+          if (e.key === "Enter") {
+            sendMessage();
+          }
         });
 
-        // Initial load
-        loadMessages();
-        
-        // Update every 1 second
-        setInterval(loadMessages, 1000);
+      // Initial load
+      loadMessages();
+
+      // Update every 1 second
+      setInterval(loadMessages, 1000);
     </script>
-</body>
+  </body>
 </html>

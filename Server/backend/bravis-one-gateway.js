@@ -203,7 +203,7 @@ class BravisOneGateway {
 const gateway = new BravisOneGateway(
   process.env.BRAVIS_GATEWAY_IP || "192.168.1.100",
   process.env.BRAVIS_GATEWAY_USER || "admin",
-  process.env.BRAVIS_GATEWAY_PASS || "admin"
+  process.env.BRAVIS_GATEWAY_PASS || "admin",
 );
 
 function initGateway(app, pollingInterval = 1000) {

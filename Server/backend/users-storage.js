@@ -4,7 +4,7 @@ const path = require("path");
 const USERS_DIR = path.join(
   __dirname,
   "..",
-  process.env.USERS_FOLDER || "users"
+  process.env.USERS_FOLDER || "users",
 );
 
 if (!fs.existsSync(USERS_DIR)) {
@@ -42,7 +42,7 @@ function getAllContacts() {
 function messageExists(phone, text, timestamp) {
   const contact = loadContact(phone);
   return contact.messages.some(
-    (m) => m.text === text && m.timestamp === timestamp
+    (m) => m.text === text && m.timestamp === timestamp,
   );
 }
 

@@ -1,9 +1,10 @@
 const { getMessageSuggestions } = require("./ai");
 const { loadContact, saveContact } = require("./users-storage");
 
-// Queue to process AI requests sequentially
-const queue = [];
+// Track latest message per sender to skip outdated requests
+const latestMessage = new Map();
 let processing = false;
+const queue = [];
 
 async function processQueue(gateway) {
   if (processing || queue.length === 0) return;
@@ -11,13 +12,32 @@ async function processQueue(gateway) {
 
   while (queue.length > 0) {
     const { msg, sender } = queue.shift();
+
+    // Skip if a newer message from this sender exists
+    if (latestMessage.get(sender) !== msg.timestamp) {
+      console.log(
+        `Skipping outdated message from ${sender}: "${msg.text.substring(0, 30)}..."`,
+      );
+      continue;
+    }
+
     try {
       const suggestions = await getMessageSuggestions(msg.text, sender);
+
+      // Check again after AI call – a newer message may have arrived
+      if (latestMessage.get(sender) !== msg.timestamp) {
+        console.log(
+          `Discarding AI result, newer message from ${sender} arrived`,
+        );
+        continue;
+      }
 
       // Log all 3 options
       for (let i = 0; i < 3; i++) {
         const opt = suggestions[i];
-        console.log(`  Option ${i + 1}: ${opt[`message-content-${i + 1}`]},${opt[`timestamp-${i + 1}`]},${opt[`message-id-${i + 1}`]}`);
+        console.log(
+          `  Option ${i + 1}: ${opt[`message-content-${i + 1}`]},${opt[`timestamp-${i + 1}`]},${opt[`message-id-${i + 1}`]}`,
+        );
       }
 
       const pick = Math.floor(Math.random() * 3);
@@ -55,7 +75,8 @@ function handleIncomingMessage(msg, gateway) {
   const sender = msg.senders && msg.senders[0] ? msg.senders[0].number : null;
 
   // Only query AI if the message is recent (within last 60 seconds)
-  if (msgAge <= 60) {
+  if (msgAge <= 60 && sender) {
+    latestMessage.set(sender, msg.timestamp);
     queue.push({ msg, sender });
     processQueue(gateway);
   }

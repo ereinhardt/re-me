@@ -1,42 +1,42 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>re: me – Settings</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
     <h1>re: me – Settings</h1>
     <div id="contactList"></div>
 
     <script>
-        async function loadContacts() {
-            try {
-                const res = await fetch('/api/contacts');
-                const contacts = await res.json();
-                
-                const listDiv = document.getElementById('contactList');
-                listDiv.innerHTML = '';
-                
-                contacts.forEach(contact => {
-                    const link = document.createElement('a');
-                    link.href = `chat.html?phone=${encodeURIComponent(contact.phone)}`;
-                    link.target = '_blank';
-                    link.textContent = contact.phone;
-                    listDiv.appendChild(link);
-                    listDiv.appendChild(document.createElement('br'));
-                });
-            } catch (error) {
-                console.error('Error loading contacts:', error);
-            }
-        }
+      async function loadContacts() {
+        try {
+          const res = await fetch("/api/contacts");
+          const contacts = await res.json();
 
-        // Initial load
-        loadContacts();
-        
-        // Update every 5 seconds
-        setInterval(loadContacts, 5000);
+          const listDiv = document.getElementById("contactList");
+          listDiv.innerHTML = "";
+
+          contacts.forEach((contact) => {
+            const link = document.createElement("a");
+            link.href = `chat.html?phone=${encodeURIComponent(contact.phone)}`;
+            link.target = "_blank";
+            link.textContent = contact.phone;
+            listDiv.appendChild(link);
+            listDiv.appendChild(document.createElement("br"));
+          });
+        } catch (error) {
+          console.error("Error loading contacts:", error);
+        }
+      }
+
+      // Initial load
+      loadContacts();
+
+      // Update every 5 seconds
+      setInterval(loadContacts, 5000);
     </script>
-</body>
+  </body>
 </html>

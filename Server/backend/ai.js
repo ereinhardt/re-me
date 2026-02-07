@@ -148,7 +148,42 @@ async function getMessageSuggestions(initial_message, sender) {
         console.log("Delete Cache!");
       } catch (_) {}
     }
-    console.error("AI Error:", error);
+
+    const errorCode = error.status || error.code;
+    const errorMessage = error.message || "";
+
+    const isRetryable =
+      [
+        429, // RESOURCE_EXHAUSTED
+        500, // INTERNAL
+        503, // UNAVAILABLE
+        504, // DEADLINE_EXCEEDED
+      ].includes(errorCode) ||
+      errorMessage.includes("503") ||
+      errorMessage.includes("Service Unavailable") ||
+      errorMessage.includes("RESOURCE_EXHAUSTED") ||
+      errorMessage.includes("INTERNAL") ||
+      errorMessage.includes("DEADLINE_EXCEEDED");
+
+    const isFatal =
+      [
+        400, // INVALID_ARGUMENT or FAILED_PRECONDITION
+        403, // PERMISSION_DENIED
+        404, // NOT_FOUND
+      ].includes(errorCode) ||
+      errorMessage.includes("INVALID_ARGUMENT") ||
+      errorMessage.includes("FAILED_PRECONDITION") ||
+      errorMessage.includes("PERMISSION_DENIED") ||
+      errorMessage.includes("NOT_FOUND");
+
+    if (isRetryable) {
+      console.warn(`AI retryable error (${errorCode}): ${errorMessage}`);
+    } else if (isFatal) {
+      console.error(`AI fatal error (${errorCode}): ${errorMessage}`);
+    } else {
+      console.error("AI unknown error:", error);
+    }
+
     throw error;
   }
 }
