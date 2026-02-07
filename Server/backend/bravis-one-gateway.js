@@ -5,6 +5,7 @@ const {
   messageExists,
   getAllContacts,
 } = require("./users-storage");
+const { handleIncomingMessage } = require("./gateway-message-response");
 
 class BravisOneGateway {
   constructor(ip, username, password) {
@@ -144,6 +145,8 @@ class BravisOneGateway {
             });
 
             saveContact(sender, contact);
+
+            handleIncomingMessage(msg, this);
           }
         }
       });

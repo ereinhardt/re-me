@@ -33,12 +33,17 @@
             return `${day}.${month}.${year}, ${hours}:${minutes}:${seconds}`;
         }
 
+        let lastMessageCount = 0;
+
         async function loadMessages() {
             try {
                 const res = await fetch(`/api/messages/${encodeURIComponent(phone)}`);
                 const messages = await res.json();
                 
                 const messagesDiv = document.getElementById('messages');
+                const wasAtBottom = messagesDiv.scrollTop + messagesDiv.clientHeight >= messagesDiv.scrollHeight - 20;
+                const hasNewMessages = messages.length !== lastMessageCount;
+
                 messagesDiv.innerHTML = '';
                 
                 messages.forEach(msg => {
@@ -48,8 +53,8 @@
                     messageElement.textContent = `${sender} (${time}): ${msg.text}`;
                     messagesDiv.appendChild(messageElement);
                 });
-                
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+                lastMessageCount = messages.length;
             } catch (error) {
                 console.error('Error loading messages:', error);
             }
