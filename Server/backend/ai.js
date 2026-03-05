@@ -95,6 +95,10 @@ function validateResponse(parsed, message_csv) {
 }
 
 async function getMessageSuggestions(initial_message, sender) {
+  if (initial_message && initial_message.length > 500) {
+    initial_message = initial_message.substring(0, 500) + "...";
+  }
+
   const api_key = save_accesing_env_field("GEMINI_API_KEY");
   const model = save_accesing_env_field("GEMINI_MODEL");
 
