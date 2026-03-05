@@ -7,7 +7,6 @@
 
 import UIKit
 import SwiftUI
-import Combine
 
 class TextDocumentProxyObserver: ObservableObject {
     @Published var hasText: Bool = false
@@ -47,16 +46,6 @@ class TextDocumentProxyObserver: ObservableObject {
     deinit {
         timer?.invalidate()
     }
-}
-
-
-
-class AppDelegate: NSObject, UIApplicationDelegate {
-  func application(_ application: UIApplication,
-                   didFinishLaunchingWithOptions launchOptions: [UIApplication
-                     .LaunchOptionsKey: Any]? = nil) -> Bool {
-    return true
-  }
 }
 
 class KeyboardViewController: UIInputViewController {
@@ -110,10 +99,7 @@ class KeyboardViewController: UIInputViewController {
 }
 
 struct KeyboardView: View {
-    @UIApplicationDelegateAdaptor var appDelegate: AppDelegate
-    
     var viewController: KeyboardViewController
-    @State private var pasteboardString: String?
     @State var is_first_appeance: Bool = true
     @State private var messages: GeneratedMessageReponse?
     @State private var isLoading: Bool = false  // Lade-Indikator Status
@@ -144,7 +130,7 @@ struct KeyboardView: View {
                     
                 } else {
                     if gen_messages {
-                        Messages(inputDelegate: viewController, textProxyMonitor: obs, message: messages)
+                        Messages(inputDelegate: viewController, textProxyMonitor: obs, message: messages, isVisible: $gen_messages)
                     } else {
                         
                         if server_error >= 0 {

@@ -66,7 +66,7 @@ struct ContentView: View {
                     }
                 }
             }
-            .navigationTitle("Settings")
+            .navigationTitle("re: me – Settings")
             .fileImporter(
                 isPresented: $isImporting,
                 allowedContentTypes: [.commaSeparatedText, .plainText],

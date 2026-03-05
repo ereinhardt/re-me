@@ -5,7 +5,6 @@
 //  Created by Finn Jakob Reinhardt & Erik Anton Reinhardt on 05.06.24.
 //
 
-import Foundation
 import SwiftUI
 
 
@@ -17,13 +16,8 @@ struct DateText: View {
     
     private func str_to_date() -> Date {
         let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "dd.MM.yyyy'T'HH:mm:ss"
+        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
         var d = dateFormatter.date(from: date)
-        
-        if d == nil {
-            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-            d = dateFormatter.date(from: date)
-        }
         
         if d == nil {
             dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm"
@@ -46,7 +40,6 @@ struct DateText: View {
 
 struct Message: View {
     var m: String;
-    var inputDelegate: UIInputViewController
     var color: Color;
 
     var body: some View {
@@ -65,12 +58,14 @@ struct Messages: View {
     var inputDelegate: UIInputViewController
     @ObservedObject var textProxyMonitor: TextDocumentProxyObserver
     var message: GeneratedMessageReponse?
+    @Binding var isVisible: Bool
     @State private var current_index: Int = -1;
     
-    init(inputDelegate: UIInputViewController, textProxyMonitor: TextDocumentProxyObserver, message: GeneratedMessageReponse? = nil) {
+    init(inputDelegate: UIInputViewController, textProxyMonitor: TextDocumentProxyObserver, message: GeneratedMessageReponse? = nil, isVisible: Binding<Bool>) {
         self.inputDelegate = inputDelegate
         self.textProxyMonitor = textProxyMonitor
         self.message = message
+        self._isVisible = isVisible
     }
     
 
@@ -86,7 +81,6 @@ struct Messages: View {
                                 
                                     Message(
                                         m: msg.Messagecontent,
-                                        inputDelegate: inputDelegate,
                                         color: i == current_index ? Color.blue : Color(uiColor: UIColor.systemGray)  // Default color
                                     )
                                     .frame(maxWidth: .infinity, alignment: .trailing)
@@ -112,12 +106,9 @@ struct Messages: View {
                 }.frame(maxWidth: .infinity)
                     .background(Color(uiColor: UIColor.systemGray4))
                     .onChange(of: textProxyMonitor.hasText) {
-                        if !textProxyMonitor.hasText {
-                            current_index = -1
+                        if !textProxyMonitor.hasText && current_index != -1 {
+                            isVisible = false
                         }
                     }
     };
 }
-    
-    
-    
