@@ -1,5 +1,9 @@
 # re-me – Server-Version (v.2.1-3-2026)
 
+"re: me – Server" automatically responds to incoming SMS with a matching message from its dataset.
+
+---
+
 ## Configuration
 
 1. Create a `users` folder in the root of this software.
