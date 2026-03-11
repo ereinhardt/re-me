@@ -1,4 +1,4 @@
-# re-me Server-Version (v.2.1-3-2026)
+# re-me – Server-Version (v.2.1-3-2026)
 
 ## Configuration
 
@@ -20,3 +20,10 @@ GEMINI_MODEL="gemini-3-flash-preview"
 
 1. Delete all the // comments from the `.env`.
 2. Manage your Google Gemini (GenAI) API Settings and Costs at: https://console.cloud.google.com
+
+## Start (re-me – Server) Software
+
+```bash
+npm i
+npm run start_backend
+```
