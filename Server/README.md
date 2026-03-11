@@ -14,5 +14,9 @@ BRAVIS_GATEWAY_PASS="admin"
 USERS_FOLDER="users"
 GEMINI_API_KEY=""
 GEMINI_MODEL="gemini-3-flash-preview"
-
 ```
+
+**Note**:
+
+1. Delete all the // comments from the `.env`.
+2. Manage your Google Gemini (GenAI) API Settings and Costs at: https://console.cloud.google.com
