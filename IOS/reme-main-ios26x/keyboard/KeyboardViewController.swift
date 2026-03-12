@@ -154,45 +154,38 @@ struct KeyboardView: View {
                 await checkPasteboard()
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            // Re-sync clipboard state after lock/unlock without triggering a load
+            lastPasteboardChangeCount = UIPasteboard.general.changeCount
+        }
 
     }
     
     private func checkPasteboard() async {
         let currentCount = UIPasteboard.general.changeCount
-        if lastPasteboardChangeCount != currentCount {
-            lastPasteboardChangeCount = currentCount
-            
-            if UIPasteboard.general.hasStrings,
-               let str = UIPasteboard.general.string, !str.isEmpty {
-                await updatePasteboardString(context: str)
+        guard lastPasteboardChangeCount != currentCount else { return }
+        lastPasteboardChangeCount = currentCount
+        
+        guard let text = UIPasteboard.general.string, !text.isEmpty else { return }
+        guard netzwerkMonitor.connected else {
+            server_error = 0
+            return
+        }
+        
+        isLoading = true
+        do {
+            server_error = -1
+            let res = try await GENERATE(context: text)
+            messages = res
+            gen_messages = true
+        } catch {
+            gen_messages = false
+            if "\(error)".contains("validation") || "\(error)".contains("3 attempts") {
+                server_error = 2
+            } else {
+                server_error = 1
             }
         }
-    }
-    
-    private func updatePasteboardString(context: String) async {
-        guard netzwerkMonitor.connected else {
-                server_error = 0
-                return
-            }
-            
-            isLoading = true  // Show loading spinner
-            
-            do {
-                server_error = -1
-                let res = try await GENERATE(context: context)
-                    // Handle successful result
-                    messages = res
-                    gen_messages = true
-            } catch {
-                // Handle error
-                gen_messages = false
-                if "\(error)".contains("validation") || "\(error)".contains("3 attempts") {
-                    server_error = 2
-                } else {
-                    server_error = 1
-                }
-            }
-            
-            isLoading = false  // Hide loading spinner when done
+        isLoading = false
     }
 }
