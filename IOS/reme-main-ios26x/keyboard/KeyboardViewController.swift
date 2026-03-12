@@ -95,7 +95,6 @@ class KeyboardViewController: UIInputViewController {
 struct KeyboardView: View {
     var viewController: KeyboardViewController
     @State private var lastPasteboardChangeCount: Int = -1
-    @State private var lastPasteboardString: String = ""
     private let pasteboardTimer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
     @State private var messages: GeneratedMessageReponse?
     @State private var isLoading: Bool = false  // Loading indicator state
@@ -109,7 +108,6 @@ struct KeyboardView: View {
         self.obs = TextDocumentProxyObserver(textDocumentProxy: viewController.textDocumentProxy)
         // Freeze clipboard state on open – only new copy actions should trigger a load
         _lastPasteboardChangeCount = State(initialValue: UIPasteboard.general.changeCount)
-        _lastPasteboardString = State(initialValue: UIPasteboard.general.string ?? "")
     }
 
     
@@ -164,11 +162,9 @@ struct KeyboardView: View {
         if lastPasteboardChangeCount != currentCount {
             lastPasteboardChangeCount = currentCount
             
-            if UIPasteboard.general.hasStrings {
-                if let str = UIPasteboard.general.string, !str.isEmpty, str != lastPasteboardString {
-                    lastPasteboardString = str
-                    await updatePasteboardString(context: str)
-                }
+            if UIPasteboard.general.hasStrings,
+               let str = UIPasteboard.general.string, !str.isEmpty {
+                await updatePasteboardString(context: str)
             }
         }
     }
