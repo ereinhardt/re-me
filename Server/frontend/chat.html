@@ -50,11 +50,15 @@
 
           messages.forEach((msg) => {
             const messageElement = document.createElement("div");
-            const sender = msg.type === "incoming" ? phone : "You";
+            const sender = msg.type === "incoming" ? phone : "Server";
             const time = formatTimestamp(msg.timestamp);
             messageElement.textContent = `${sender} (${time}): ${msg.text}`;
             messagesDiv.appendChild(messageElement);
           });
+
+          if (wasAtBottom && hasNewMessages) {
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+          }
 
           lastMessageCount = messages.length;
         } catch (error) {
