@@ -1,8 +1,21 @@
 require("dotenv").config();
 const express = require("express");
+const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const app = express();
+
+// Users-Ordner erstellen, falls nicht vorhanden
+const usersDir = path.join(__dirname, "users");
+if (!fs.existsSync(usersDir)) {
+  fs.mkdirSync(usersDir);
+}
+
+// Message-Data-Ordner erstellen, falls nicht vorhanden
+const messageDataDir = path.join(__dirname, "message-data");
+if (!fs.existsSync(messageDataDir)) {
+  fs.mkdirSync(messageDataDir);
+}
 
 app.use(express.json());
 
