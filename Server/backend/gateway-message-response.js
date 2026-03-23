@@ -63,6 +63,24 @@ async function processQueue(gateway) {
       }
     } catch (err) {
       console.error("AI suggestion error:", err.message);
+
+      if (sender) {
+        try {
+          await gateway.sendMessage(sender, "Bad Server-Response!");
+
+          const contact = loadContact(sender);
+          contact.messages.push({
+            text: "Bad Server-Response!",
+            timestamp: Math.floor(Date.now() / 1000).toString(),
+            type: "outgoing",
+          });
+          saveContact(sender, contact);
+
+          console.log(`Fallback reply sent to ${sender}`);
+        } catch (sendErr) {
+          console.error("Failed to send fallback message:", sendErr.message);
+        }
+      }
     }
   }
 
