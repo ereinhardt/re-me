@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>re: me – Settings</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body class="settings">
+    <h1>re: me – Settings</h1><br><br>
+
+    <section class="category">
+      <h3>Stats:</h3>
+      <div>Total messages: <span id="totalMessages">–</span></div>
+      <div class="status">
+        System status:
+        <span id="systemStatus" class="status-loading"
+          >Loading models &amp; database…</span
+        >
+      </div>
+    </section>
+
+    <section class="category">
+      <h3>Country Code Whitelist:</h3>
+      <div id="countryCodes" class="scroll-box"></div>
+    </section>
+
+    <section class="category">
+      <h3>Blacklist (one word / phrase per line):</h3>
+      <div id="blacklist" class="scroll-box"></div>
+    </section>
+
+    <section class="category">
+      <h3>Contacts:</h3>
+      <div id="contactList" class="scroll-box"></div>
+    </section>
+
+    <script>
+      async function loadContacts() {
+        try {
+          const res = await fetch("/api/contacts");
+          const contacts = await res.json();
+
+          const listDiv = document.getElementById("contactList");
+          listDiv.innerHTML = "";
+
+          contacts.forEach((contact) => {
+            const link = document.createElement("a");
+            link.href = `chat.html?phone=${encodeURIComponent(contact.phone)}`;
+            link.target = "_blank";
+            link.textContent = contact.phone;
+            listDiv.appendChild(link);
+            listDiv.appendChild(document.createElement("br"));
+          });
+        } catch (error) {
+          console.error("Error loading contacts:", error);
+        }
+      }
+
+      let countryCodes = [];
+      function renderCountryCodes() {
+        const div = document.getElementById("countryCodes");
+        div.innerHTML = "";
+        countryCodes.forEach((c) => {
+          const label = document.createElement("label");
+          label.innerHTML = `<input type="checkbox" data-code="${c.code}" ${c.enabled ? "checked" : ""}/> 00${c.code} ${c.name}`;
+          div.appendChild(label);
+        });
+      }
+
+      async function loadCountryCodes() {
+        const res = await fetch("/api/country-codes");
+        countryCodes = await res.json();
+        renderCountryCodes();
+      }
+
+      // One row (input + Remove button) per entry plus an empty last row for
+      // the next entry. Enter in a row saves the list and moves to a new empty
+      // row below; the last row is only saved once Enter is pressed in it.
+      // Remove (or deleting a row's content) deletes the entry.
+      function updatePlaceholders() {
+        document.querySelectorAll("#blacklist input").forEach((input, i) => {
+          input.placeholder = i === 0 ? "Enter first item..." : "Add next item";
+        });
+      }
+
+      function addBlacklistLine(value = "", afterRow = null) {
+        const list = document.getElementById("blacklist");
+        const row = document.createElement("div");
+        row.className = "blacklist-row";
+        const input = document.createElement("input");
+        input.type = "text";
+        input.spellcheck = false;
+        input.value = value;
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.textContent = "Remove";
+        row.append(input, remove);
+        list.insertBefore(row, afterRow ? afterRow.nextSibling : null);
+        updatePlaceholders();
+        return input;
+      }
+
+      async function loadBlacklist() {
+        const res = await fetch("/api/blacklist");
+        const terms = await res.json();
+        document.getElementById("blacklist").innerHTML = "";
+        terms.forEach((term) => addBlacklistLine(term));
+        addBlacklistLine();
+      }
+
+      function saveBlacklist() {
+        const inputs = [...document.querySelectorAll("#blacklist input")];
+        const text = inputs
+          .slice(0, -1)
+          .map((i) => i.value)
+          .join("\n");
+        fetch("/api/blacklist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+      }
+
+      function removeBlacklistLine(row, focusRow = null) {
+        if (!row.nextElementSibling) return; // the empty last row stays
+        row.remove();
+        updatePlaceholders();
+        saveBlacklist();
+        if (focusRow) {
+          const input = focusRow.querySelector("input");
+          input.focus();
+          input.setSelectionRange(input.value.length, input.value.length);
+        }
+      }
+
+      // A row whose content is deleted is removed right away.
+      document.getElementById("blacklist").addEventListener("input", (e) => {
+        if (!e.target.value) {
+          const row = e.target.parentElement;
+          removeBlacklistLine(
+            row,
+            row.previousElementSibling || row.nextElementSibling,
+          );
+        }
+      });
+
+      document.getElementById("blacklist").addEventListener("keydown", (e) => {
+        if (e.target.tagName !== "INPUT") return;
+        const input = e.target;
+        const row = input.parentElement;
+        if (e.key === "Enter") {
+          e.preventDefault();
+          if (!input.value.trim()) {
+            removeBlacklistLine(row, row.nextElementSibling);
+            return;
+          }
+          const next = row.nextElementSibling;
+          const nextInput = next && next.querySelector("input");
+          (nextInput && !nextInput.value.trim()
+            ? nextInput
+            : addBlacklistLine("", row)
+          ).focus();
+          saveBlacklist();
+        } else if (e.key === "Backspace" && !input.value) {
+          e.preventDefault();
+          removeBlacklistLine(
+            row,
+            row.previousElementSibling || row.nextElementSibling,
+          );
+        }
+      });
+
+      document.getElementById("blacklist").addEventListener("click", (e) => {
+        if (e.target.tagName === "BUTTON") {
+          removeBlacklistLine(e.target.parentElement);
+        }
+      });
+
+      async function loadStatus() {
+        const div = document.getElementById("systemStatus");
+        try {
+          const res = await fetch("/api/status");
+          const { status, messages } = await res.json();
+          document.getElementById("totalMessages").textContent = messages;
+          if (status === "ready") {
+            div.className = "status-ready";
+            div.textContent = "System ready – models & database initialised";
+          } else {
+            div.className = "status-loading";
+            div.textContent = "Loading models & database…";
+          }
+        } catch (e) {
+          div.className = "status-error";
+          div.textContent = "Server not reachable";
+        }
+      }
+
+      document.addEventListener("change", (e) => {
+        if (e.target.matches("#countryCodes input[type=checkbox]")) {
+          const code = e.target.dataset.code;
+          const c = countryCodes.find((x) => x.code === code);
+          if (c) c.enabled = e.target.checked;
+          const wl = Object.fromEntries(
+            countryCodes.filter((x) => x.enabled).map((x) => [x.code, true]),
+          );
+          fetch("/api/country-codes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(wl),
+          });
+        }
+      });
+
+      loadContacts();
+      loadCountryCodes();
+      loadBlacklist();
+      loadStatus();
+      setInterval(loadContacts, 5000);
+      setInterval(loadStatus, 3000);
+    </script>
+  </body>
+</html>

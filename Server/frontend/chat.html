@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>re: me – Chat</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- Closes the tab opened from the settings page; if the browser does not
+         allow that (page opened directly), the link navigates back instead. -->
+    <a
+      class="back"
+      href="/"
+      onclick="
+        window.close();
+        return !window.closed;
+      "
+      >Back</a
+    >
+    <h1>Chat</h1><br><br>
+    <section class="category chat">
+      <h3 id="title"><span id="phoneNumber"></span>:</h3>
+
+      <div id="messages"></div>
+
+      <div class="input-container">
+        <input type="text" id="messageInput" placeholder="Enter message..." />
+        <button id="sendButton" onclick="sendMessage()">Send</button>
+      </div>
+    </section>
+
+    <script>
+      const urlParams = new URLSearchParams(window.location.search);
+      const phone = urlParams.get("phone");
+      document.getElementById("phoneNumber").textContent = phone;
+
+      function formatTimestamp(timestamp) {
+        const date = new Date(parseInt(timestamp) * 1000);
+        const day = String(date.getDate()).padStart(2, "0");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const year = date.getFullYear();
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        const seconds = String(date.getSeconds()).padStart(2, "0");
+        return `${day}.${month}.${year}, ${hours}:${minutes}:${seconds}`;
+      }
+
+      let lastMessageCount = -1;
+
+      async function loadMessages() {
+        try {
+          const res = await fetch(`/api/messages/${encodeURIComponent(phone)}`);
+          const messages = await res.json();
+
+          // History only grows, so re-render only when the count changes
+          // (keeps text selections intact between polls).
+          if (messages.length === lastMessageCount) return;
+
+          const messagesDiv = document.getElementById("messages");
+          const wasAtBottom =
+            messagesDiv.scrollTop + messagesDiv.clientHeight >=
+            messagesDiv.scrollHeight - 20;
+
+          messagesDiv.innerHTML = "";
+
+          messages.forEach((msg) => {
+            const messageElement = document.createElement("div");
+            const sender = msg.type === "incoming" ? phone : "Server";
+            const time = formatTimestamp(msg.timestamp);
+            messageElement.textContent = `${sender} (${time}): ${msg.text}`;
+            // Messages that could not be sent are shown in red.
+            if (msg.failed) messageElement.className = "message-failed";
+            messagesDiv.appendChild(messageElement);
+          });
+
+          if (wasAtBottom) {
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+          }
+
+          lastMessageCount = messages.length;
+        } catch (error) {
+          console.error("Error loading messages:", error);
+        }
+      }
+
+      async function sendMessage() {
+        const input = document.getElementById("messageInput");
+        const message = input.value;
+        if (message.trim() === "") return;
+
+        try {
+          // A failed send is stored by the server and shows up in red in the
+          // history, so the response status needs no handling here.
+          await fetch(`/api/messages/${encodeURIComponent(phone)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: message }),
+          });
+          input.value = "";
+          loadMessages();
+        } catch (error) {
+          // Server not reachable: nothing was stored, keep the text.
+          console.error("Error sending message:", error);
+        }
+      }
+
+      document
+        .getElementById("messageInput")
+        .addEventListener("keydown", function (e) {
+          // isComposing: Enter confirms an IME composition, don't send yet.
+          if (e.key === "Enter" && !e.isComposing) {
+            sendMessage();
+          }
+        });
+
+      if (!phone) {
+        document.getElementById("title").textContent = "No contact selected";
+        document.getElementById("messageInput").disabled = true;
+        document.getElementById("sendButton").disabled = true;
+      } else {
+        // Initial load, then update every 1 second
+        loadMessages();
+        setInterval(loadMessages, 1000);
+      }
+    </script>
+  </body>
+</html>
