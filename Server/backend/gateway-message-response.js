@@ -1,28 +1,26 @@
 const { getMessageSuggestions } = require("./matching");
 const { isAllowed } = require("./country-codes");
 const { isBlacklisted } = require("./blacklist");
+const { getMessageRequests, saveMessageRequests } = require("./users-storage");
 
 const MAX_MESSAGE_REQUESTS = parseInt(process.env.MAX_MESSAGE_REQUESTS) || 0;
-const userRequestCounts = new Map();
-let userRequestDay = new Date().toDateString();
 
+// Counter and "limit notified" flag live in users/<phone>.json (messageRequests).
 function checkAndIncrementUserRequests(sender) {
-  const today = new Date().toDateString();
-  if (today !== userRequestDay) {
-    userRequestDay = today;
-    userRequestCounts.clear();
+  const requests = getMessageRequests(sender);
+  if (MAX_MESSAGE_REQUESTS > 0 && requests.count >= MAX_MESSAGE_REQUESTS) {
+    return false;
   }
-  const count = userRequestCounts.get(sender) || 0;
-  if (MAX_MESSAGE_REQUESTS > 0 && count >= MAX_MESSAGE_REQUESTS) return false;
-  userRequestCounts.set(sender, count + 1);
+  requests.count++;
+  saveMessageRequests(sender, requests);
   return true;
 }
 
-const limitNotified = new Map(); // sender -> day already notified
 function shouldNotifyLimit(sender) {
-  const today = new Date().toDateString();
-  if (limitNotified.get(sender) === today) return false;
-  limitNotified.set(sender, today);
+  const requests = getMessageRequests(sender);
+  if (requests.limitNotified) return false;
+  requests.limitNotified = true;
+  saveMessageRequests(sender, requests);
   return true;
 }
 

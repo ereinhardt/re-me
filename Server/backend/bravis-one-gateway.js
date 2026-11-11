@@ -161,6 +161,13 @@ class BravisOneGateway {
         if (this.seenMessages.has(key)) return;
         this.seenMessages.add(key);
 
+        // Only text is accepted: images, videos, audio, stickers etc. arrive
+        // without text and are neither stored, counted nor answered.
+        if (typeof msg.text !== "string" || msg.text.trim() === "") {
+          console.log(`Ignoring non-text message from ${sender}`);
+          return;
+        }
+
         addMessage(sender, {
           text: msg.text,
           timestamp: msg.timestamp,

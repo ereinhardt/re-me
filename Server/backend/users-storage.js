@@ -75,6 +75,21 @@ function addMessage(phone, message) {
   saveContact(phone, contact);
 }
 
+// Daily message-request counter, kept in the contact file so it survives
+// server restarts. A counter from an earlier day (server time) starts at 0.
+function getMessageRequests(phone) {
+  const today = new Date().toDateString();
+  const stored = loadContact(phone).messageRequests;
+  if (stored && stored.day === today) return stored;
+  return { day: today, count: 0, limitNotified: false };
+}
+
+function saveMessageRequests(phone, requests) {
+  const contact = loadContact(phone);
+  contact.messageRequests = requests;
+  saveContact(phone, contact);
+}
+
 function getAllContacts() {
   const files = fs.readdirSync(USERS_DIR);
   return files
@@ -89,4 +104,6 @@ module.exports = {
   loadContact,
   addMessage,
   getAllContacts,
+  getMessageRequests,
+  saveMessageRequests,
 };
