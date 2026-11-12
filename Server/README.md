@@ -8,13 +8,16 @@
 Imports the protagonist's own messages from chat exports into `message-data/message_index.csv`, the dataset the server answers from. Requires Python 3 with tkinter.
 
 ```bash
-python3 tools/data-extraction/start.py
+python3 tools/data-extraction/import.py
 ```
 
-Click "Choose export file(s)…" and select one or more exports:
+Click "Import Chat Data" and select one or more exports:
 
 - **WhatsApp**: the ZIP as exported by the app (`WhatsApp Chat - X.zip`) or the extracted `.txt`
 - **Telegram Desktop**: `result.json` (JSON export) or `export_results.html` (HTML export)
+- **re: me**: a `.csv` in the format of `message_index.csv` (header `message-content,timestamp,message-id,protagonist`)
+
+"Reset Chat Data" deletes `message_index.csv` and `protagonist.json` (after a confirmation); the next import starts from scratch and asks for the protagonist again.
 
 ## Configuration
 
