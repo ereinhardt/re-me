@@ -45,6 +45,9 @@ def _merge(profile, embedded):
     for platform, ids in (embedded.get("ids") or {}).items():
         known = profile["ids"].setdefault(platform, [])
         known.extend(i for i in ids if i not in known)
+    for platform in embedded.get("platforms") or []:
+        if platform not in profile["platforms"]:
+            profile["platforms"].append(platform)
 
 
 def load(path):
@@ -60,6 +63,7 @@ def load(path):
     messages = []
     profile = {field: [] for field in PROFILE_FIELDS}
     profile["ids"] = {}
+    profile["platforms"] = []
     for row in rows:
         if len(row) < 2:
             continue
@@ -81,7 +85,8 @@ def message_counts(data):
 
 def identities(data):
     """One sender with the embedded protagonist profile (ids of all
-    platforms under "ids")."""
+    platforms under "ids", the platforms already asked for under
+    "platforms")."""
     return {SENDER: data["profile"]}
 
 

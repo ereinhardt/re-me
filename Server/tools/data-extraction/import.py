@@ -4,7 +4,8 @@
 #
 # Opens a small window to choose one or more chat exports (as handed out by
 # the apps, e.g. raw-data/whatsapp/*.zip, raw-data/telegram/.../result.json
-# or, for Telegram's HTML export, .../export_results.html), or a CSV in the
+# or, for Telegram's HTML export, .../export_results.html,
+# raw-data/signal-export-.../main.jsonl), or a CSV in the
 # format of message_index.csv itself (e.g. a backup or another dataset).
 # For every file the pattern is detected, the protagonist is determined, and
 # only the protagonist's messages are appended to
@@ -19,30 +20,32 @@
 # format, add a new file for the new version next to the old one; all
 # pattern_*.py files are picked up automatically.
 #
-# The protagonist is asked for only once, on the very first import, from the
-# senders of all files chosen (sorted by the number of files they appear in,
-# so the protagonist is usually on top), and stored
-# as one profile for all platforms in patterns/protagonist.json: names, phone
-# numbers, usernames and platform ids. Every pattern reports what an export
-# reveals about each sender (identities()); a sender is the protagonist if any
-# of it matches the profile, e.g. the WhatsApp display name equals the Telegram
-# account name, or a phone number known from Telegram shows up in WhatsApp.
-# Whatever a matched sender reveals in addition is added to the profile, so
-# later imports of other platforms recognise the protagonist as well. Names
-# and usernames are compared regardless of case, spacing and invisible
+# The protagonist is asked for once per platform, on the first import of that
+# platform, from the senders of all files of the platform chosen (sorted by
+# the number of files they appear in, so the protagonist is usually on top;
+# the export owner and senders already matching the profile are preselected).
+# The protagonist may go by different names and usernames on every platform,
+# so each platform is asked for independently. The choice is stored as one
+# profile for all platforms in patterns/protagonist.json: names, phone
+# numbers, usernames and platform ids, and under "platforms" the platforms
+# already asked for. Every pattern reports what an export reveals about each
+# sender (identities()); a sender is the protagonist if any of it matches the
+# profile, e.g. the WhatsApp display name chosen on the first WhatsApp import,
+# or a phone number known from Telegram that shows up in WhatsApp. Whatever a
+# matched sender reveals in addition is added to the profile. Names and
+# usernames are compared regardless of case, spacing and invisible
 # characters; phone numbers without country code ("+49 152 …" = "0152 …").
 # Files without a match are skipped (chats in which the protagonist never
 # wrote), as are files no pattern can read or that cause an error; after the
 # import a short message says in how many files no pattern or no protagonist
-# was found. If the
-# protagonist goes by a name not known yet, add it to
+# was found. If the protagonist later goes by a name not known yet, add it to
 # patterns/protagonist.json. Patterns with PROTAGONIST_ONLY = True (the
 # message_index.csv format) read files that contain only the protagonist's
 # messages; all of them are taken without asking or matching. The profile
 # embedded in such a file is added to protagonist.json if no profile exists
 # yet or if it matches the existing one (i.e. it is the same person).
 #
-# "Reset Chat Data" deletes message_index.csv and protagonist.json (after a
+# "Reset Data" deletes message_index.csv and protagonist.json (after a
 # confirmation), so the next import starts from scratch.
 #
 # Usage (from the Server directory):
@@ -107,6 +110,7 @@ def load_profile():
     for field in PROFILE_FIELDS:
         profile.setdefault(field, [])
     profile.setdefault("ids", {})
+    profile.setdefault("platforms", [])  # platforms the protagonist was chosen for
     return profile
 
 
@@ -177,8 +181,9 @@ def matches(profile, platform, identity):
 
 
 def learn(profile, platform, identity):
-    """Add what is known about a protagonist sender to the profile. Returns
-    the new values."""
+    """Add what is known about a protagonist sender to the profile,
+    including the platforms a profile embedded in message_index.csv was
+    already asked for. Returns the new values."""
     new = []
     for p, ids in platform_ids(platform, identity).items():
         known = profile["ids"].setdefault(p, [])
@@ -191,20 +196,21 @@ def learn(profile, platform, identity):
             if key(field, v) not in {key(field, known) for known in profile[field]}:
                 profile[field].append(v)
                 new.append(v)
+    for p in identity.get("platforms") or []:
+        if p not in profile["platforms"]:
+            profile["platforms"].append(p)
+            new.append(f"platform {p}")
     return new
 
 
 def describe(platform, identity):
-    """The values learn() would store for a sender, as shown in the dialog."""
-    parts = []
+    """The sender as shown in the dialog: the name or, if there is none, the
+    phone number or username. learn() still stores everything the export
+    reveals about a chosen sender, not only the shown value."""
     for field in PROFILE_FIELDS:
         for v in values(identity, field):
-            v = "@" + v if field == "usernames" else v
-            if v not in parts:
-                parts.append(v)
-    if identity.get("id"):
-        parts.append(f"{platform} id {identity['id']}")
-    return ", ".join(parts)
+            return "@" + v if field == "usernames" else v
+    return f"{platform} id {identity['id']}" if identity.get("id") else "Unknown"
 
 
 def has_profile(profile):
@@ -260,33 +266,33 @@ def append_to_index(rows):
 
 
 class ProtagonistDialog(tk.Toplevel):
-    """Asks which sender(s) are the protagonist (only while the profile is
-    still empty). Shows the senders of all chosen files together, each with
-    exactly the information that is stored in protagonist.json when it is
-    chosen; senders found in the most files come first (the protagonist is
-    usually in all of them), then those with the most messages. `candidates`
-    maps (platform, sender) to [identity, files, messages]. `result` is the
-    list of chosen keys, or None if the import is cancelled."""
+    """Asks which sender(s) of a platform are the protagonist (only on the
+    first import of the platform). Shows the senders of all chosen files of
+    the platform together, each as name, phone number or username
+    (describe()); senders found in the most files come first (the
+    protagonist is usually in all of them), then those with the most
+    messages. `candidates` maps (platform, sender) to [identity, files,
+    messages]. `result` is the list of chosen keys, or None if the import is
+    cancelled."""
 
-    def __init__(self, parent, candidates, suggested):
+    def __init__(self, parent, platform, candidates, suggested):
         super().__init__(parent)
-        self.title("Protagonist")
+        self.title(f"Protagonist – {platform}")
         self.transient(parent)
         self.result = None
 
-        tk.Label(self, text="Choose Protagonist:").pack(anchor="w", padx=10, pady=(10, 4))
+        tk.Label(self, text=f"Choose Protagonist on {platform}:").pack(anchor="w", padx=10, pady=(10, 4))
 
         self.keys = sorted(candidates, key=lambda k: (-candidates[k][1], -candidates[k][2]))
         frame = tk.Frame(self)
         frame.pack(fill="both", expand=True, padx=10)
         scrollbar = tk.Scrollbar(frame)
         scrollbar.pack(side="right", fill="y")
-        self.listbox = tk.Listbox(frame, selectmode=tk.MULTIPLE, width=80, height=min(len(self.keys), 15),
+        self.listbox = tk.Listbox(frame, selectmode=tk.MULTIPLE, width=50, height=min(len(self.keys), 15),
                                   yscrollcommand=scrollbar.set)
         scrollbar.configure(command=self.listbox.yview)
         for i, (platform, sender) in enumerate(self.keys):
-            identity, files, messages = candidates[(platform, sender)]
-            self.listbox.insert(tk.END, f"{describe(platform, identity)}   ({files} file(s), {messages} messages)")
+            self.listbox.insert(tk.END, describe(platform, candidates[(platform, sender)][0]))
             if (platform, sender) in suggested:
                 self.listbox.selection_set(i)
         self.listbox.pack(side="left", fill="both", expand=True)
@@ -323,7 +329,7 @@ class App(tk.Tk):
         self.button = tk.Button(self, text="Import Chat Data", command=self.run)
         self.button.pack(padx=20, pady=(20, 6))
 
-        self.reset_button = tk.Button(self, text="Reset Chat Data", command=self.reset)
+        self.reset_button = tk.Button(self, text="Reset Data", command=self.reset)
         self.reset_button.pack(padx=20, pady=(0, 20))
 
     def update_total(self):
@@ -351,31 +357,34 @@ class App(tk.Tk):
                     for s, identity in identities.items()}
         return {s: identity for s, identity in identities.items() if matches(profile, pattern.NAME, identity)}
 
-    def choose_protagonist(self, files, profile):
+    def choose_protagonist(self, platform, files, profile):
         """Ask for the protagonist among the senders of all (pattern, data)
-        `files` and add the chosen senders to the profile. Returns False if
-        the import is cancelled."""
+        `files` of a platform and add the chosen senders to the profile
+        (not saved yet). Returns False if the import is cancelled, None if
+        the files have no senders (the platform is asked for again next
+        time), True otherwise."""
         candidates = {}  # (platform, sender) -> [identity, files, messages]
         suggested = set()
         for pattern, data in files:
             try:
                 identities = pattern.identities(data)
                 counts = pattern.message_counts(data)
-                suggested.update((pattern.NAME, s) for s in getattr(pattern, "suggested_ids", lambda d: [])(data))
+                suggested.update((platform, s) for s in getattr(pattern, "suggested_ids", lambda d: [])(data))
             except Exception:
                 continue  # counted as unreadable when imported
             for sender, identity in identities.items():
-                candidate = candidates.setdefault((pattern.NAME, sender), [identity, 0, 0])
+                candidate = candidates.setdefault((platform, sender), [identity, 0, 0])
                 candidate[1] += 1
                 candidate[2] += counts.get(sender, 0)
+                if matches(profile, platform, identity):
+                    suggested.add((platform, sender))
         if not candidates:
-            return True
-        dialog = ProtagonistDialog(self, candidates, suggested)
+            return None
+        dialog = ProtagonistDialog(self, platform, candidates, suggested)
         if dialog.result is None:
             return False
         for key_ in dialog.result:
-            learn(profile, key_[0], candidates[key_][0])
-        save_profile(profile)
+            learn(profile, platform, candidates[key_][0])
         return True
 
     def run(self):
@@ -383,7 +392,7 @@ class App(tk.Tk):
             parent=self,
             title="Choose chat exports",
             initialdir=os.path.abspath(RAW_DATA_DIR),
-            filetypes=[("Chat exports", "*.zip *.txt *.json *.html *.csv"), ("All files", "*")],
+            filetypes=[("Chat exports", "*.zip *.txt *.json *.jsonl *.html *.csv"), ("All files", "*")],
         )
         if not paths:
             return
@@ -406,7 +415,7 @@ class App(tk.Tk):
         so the next import starts from scratch (and asks for the protagonist
         again)."""
         if not messagebox.askyesno(
-            "Reset Chat Data",
+            "Reset Data",
             "Delete all imported messages (message_index.csv) and the protagonist profile "
             "(protagonist.json)?\n\nThis cannot be undone.",
             icon="warning",
@@ -434,30 +443,49 @@ class App(tk.Tk):
                 files.append((pattern, data))
             else:
                 no_pattern += 1
-        # Files with only the protagonist's messages first: the profile
-        # embedded in them may already identify the protagonist.
-        files.sort(key=lambda f: not protagonist_only(f[0]))
 
-        asked = False
-        for pattern, data in files:
+        def import_file(pattern, data):
+            nonlocal profile_changed, no_pattern, no_protagonist
             try:
-                if not protagonist_only(pattern) and not has_profile(profile) and not asked:
-                    asked = True
-                    if not self.choose_protagonist([f for f in files if not protagonist_only(f[0])], profile):
-                        return  # cancelled: nothing is imported
-                    profile_changed = True
                 protagonist = self.protagonist_for(pattern, data, profile)
                 if not protagonist:
                     no_protagonist += 1
-                    continue
+                    return
                 rows.extend(pattern.extract(data, set(protagonist)))
             except Exception:
                 no_pattern += 1
-                continue
+                return
             # Learned only from files that were read without error.
             if any([learn(profile, pattern.NAME, identity) for identity in protagonist.values()]):
                 save_profile(profile)
                 profile_changed = True
+
+        # Files with only the protagonist's messages first: the profile
+        # embedded in them may already identify the protagonist (preselected
+        # in the dialog).
+        for pattern, data in files:
+            if protagonist_only(pattern):
+                import_file(pattern, data)
+
+        # Platforms imported for the first time: ask for the protagonist on
+        # each of them before their files are imported.
+        platforms = []
+        for pattern, _ in files:
+            if not protagonist_only(pattern) and pattern.NAME not in profile["platforms"] + platforms:
+                platforms.append(pattern.NAME)
+        for platform in platforms:
+            chosen = self.choose_protagonist(platform, [f for f in files if f[0].NAME == platform], profile)
+            if chosen is False:
+                return  # cancelled: nothing is imported
+            if chosen:
+                profile["platforms"].append(platform)
+        if platforms:
+            save_profile(profile)
+            profile_changed = True
+
+        for pattern, data in files:
+            if not protagonist_only(pattern):
+                import_file(pattern, data)
 
         if rows:
             append_to_index(rows)
