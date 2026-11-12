@@ -15,9 +15,12 @@ Click "Import Chat Data" and select one or more exports:
 
 - **WhatsApp**: the ZIP as exported by the app (`WhatsApp Chat - X.zip`) or the extracted `.txt`
 - **Telegram Desktop**: `result.json` (JSON export) or `export_results.html` (HTML export)
+- **Signal**: `main.jsonl` from the export folder (`signal-export-<date>/`)
 - **re: me**: a `.csv` in the format of `message_index.csv` (header `message-content,timestamp,message-id,protagonist`)
 
-"Reset Chat Data" deletes `message_index.csv` and `protagonist.json` (after a confirmation); the next import starts from scratch and asks for the protagonist again.
+On the first import of each platform (WhatsApp, Telegram, Signal) the import asks which sender is the protagonist, since names and usernames may differ between platforms. The choice is stored in `tools/data-extraction/patterns/protagonist.json`, later imports of the platform recognise the protagonist automatically.
+
+"Reset Data" deletes `message_index.csv` and `protagonist.json` (after a confirmation); the next import starts from scratch and asks for the protagonist again on every platform.
 
 ## Configuration
 
