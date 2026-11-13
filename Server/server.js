@@ -62,6 +62,9 @@ app.get("/api/status", (req, res) => {
 initMatching()
   .then(() => {
     matchingStatus = "ready";
+    process.stdout.write(
+      `Gateway Interface: https://${process.env.BRAVIS_GATEWAY_IP || "192.168.1.100"}\n`,
+    );
     startGatewayPolling(1000);
   })
   .catch((err) => {
@@ -74,7 +77,4 @@ app.use(express.static(path.join(__dirname, "frontend")));
 
 app.listen(PORT, HOST, () => {
   process.stdout.write(`Settings Interface: http://${HOST}:${PORT}\n`);
-  process.stdout.write(
-    `Gateway Interface: https://${process.env.BRAVIS_GATEWAY_IP || "192.168.1.100"}\n`,
-  );
 });

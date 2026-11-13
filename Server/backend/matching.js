@@ -183,26 +183,10 @@ async function initMatching() {
       q,
       norm: int8Norm(q),
     });
-    if (indexedRows.length % 32 === 0 || indexedRows.length === total) {
-      reportEmbedProgress(indexedRows.length, total);
-    }
   }
 
   messageIndex = indexedRows;
   console.log("Matching initialisation complete.");
-}
-
-// Progress reporter for the embedding loop. On a TTY it rewrites a single line
-// via carriage return; when stdout is piped (e.g. the test-pipeline.py bridge)
-// it emits a "__PROGRESS__done/total" marker line that the reader renders as an
-// updating line.
-function reportEmbedProgress(done, total) {
-  if (process.stdout.isTTY) {
-    process.stdout.write(`\rEmbedding ${done}/${total} ...`);
-    if (done >= total) process.stdout.write("\n");
-  } else {
-    process.stdout.write(`__PROGRESS__${done}/${total}\n`);
-  }
 }
 
 // Retrieval: the 3 replies whose response embedding best matches the message,
